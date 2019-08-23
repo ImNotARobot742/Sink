@@ -18,6 +18,7 @@ using System.Runtime.Serialization;
 
 using System.Runtime.Serialization.Json;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Perso
 {
@@ -26,8 +27,16 @@ namespace Perso
     /// </summary>
     public partial class MainWindow : Window
     {
+        //TODO handle file path to ressources and remove from bin debug
+        //TODO create query maker to get from api and not files 
+        //TODO Create appropriate classes
+        // TODO dispaly -- Query sent, message received, creating obj, ready ++ error messages
+
+
 
         public List<Equipment> equipmentList= new List<Equipment>();
+
+        #region HMI
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
@@ -48,20 +57,15 @@ namespace Perso
                 foreach (Statistic ligne in usedEquipment.statistics)
                 {
                     lignes += ligne.name + "\r\n" +
-                        "min = " + ligne.min.ToString() + "\r\n" +
-                        "value = " + ligne.value.ToString() + "\r\n" +
-                        "max = " + ligne.max.ToString() + "\r\n";
+                              "min = " + ligne.min.ToString() + "\r\n" +
+                              "value = " + ligne.value.ToString() + "\r\n" +
+                              "max = " + ligne.max.ToString() + "\r\n";
                 }
                 lblValue.Text = lignes;
             }
 
             else
                 lblValue.Text = "null";
-        }
-        public MainWindow()
-        {
-            InitializeComponent();
-            extraction2();
         }
 
         private void NumberValidationTextBox(object sender, TextCompositionEventArgs e)
@@ -70,19 +74,72 @@ namespace Perso
             e.Handled = regex.IsMatch(e.Text);
         }
 
-        public void extraction2()
-        {
-            JsonSerializer serializer = new JsonSerializer();
-            string dirpath = @"C:\Users\Thur\Desktop\j\Perso\allequipments.json";
-            using (FileStream s = File.Open(dirpath, FileMode.Open))
-            using (StreamReader sr = new StreamReader(s))
-            using (JsonReader reader = new JsonTextReader(sr))
-            {
-                while (reader.Read())
-                    equipmentList = serializer.Deserialize<List<Equipment>>(reader);
-                
 
+
+        #endregion
+
+        public MainWindow()
+        {
+            InitializeComponent();
+            string EquipJsonString = File.ReadAllText(@"allequipments.json");
+            EquipmentCreator(EquipJsonString);
+            string WeapjsonString = File.ReadAllText(@"allweapons.json");
+            EquipmentCreator(WeapjsonString);
+            
         }
+
+        #region JSONImporter
+
+        void EquipmentCreator(string jsonString)
+        {
+
+            JArray results = JArray.Parse(jsonString);
+            foreach (var result in results)
+            {
+                Equipment e = new Equipment();
+                e.ankamaId = (int)result["ankamaId"];
+                e.name = (string)result["name"];
+                if (e.ankamaId == 18691)
+                { }
+                try
+                {
+                    JArray statistics = (JArray)result["statistics"];
+                    foreach (var stat in statistics)
+                    {
+                        Statistic ligne = new Statistic();
+
+                        JObject lignes = (JObject)stat;
+                        foreach (JProperty o in lignes.Children())
+                        {
+                            ligne.name = o.Name;
+                            JToken min = null;
+                            JToken max = null;
+                            try
+                            {
+                                min = o.Value["min"];
+                                max = o.Value["max"];
+                            }
+                            catch (Exception exception)
+                            {
+
+                            }
+
+                            if (min != null)
+                                ligne.min = (int)min;
+                            if (max != null)
+                                ligne.max = (int)max;
+                        }
+
+                        e.statistics.Add(ligne);
+                    }
+                }
+                catch (Exception exception)
+                {
+                }
+                equipmentList.Add(e);
+            }
         }
+
+        #endregion
     }
 }

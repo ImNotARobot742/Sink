@@ -14,6 +14,13 @@ namespace Perso
         public int ankamaId;
         public List<Statistic> statistics;
 
+        public Equipment()
+        {
+            name = "";
+            ankamaId = -1;
+            statistics = new List<Statistic>();
+        }
+
         
     }
 }
